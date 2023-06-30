@@ -29,12 +29,10 @@ ballend:
   marker_config: 0 
   pose: 
     position:
-      - 0.05
-      - 0.41
-      - 1.20
-
+      - -0.14849
+      - 0.41548
+      - 0.89869
     orientation:
       - 0.0
       - 0.0
       - 0.0
-

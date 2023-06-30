@@ -8,8 +8,6 @@ void Internal::Init(ros::NodeHandle &n)
 
 int Internal::ConnectClient(NatNetClient* g_pClient, sNatNetClientConnectParams &g_connectParams)
 {
-    // Release previous server
-    g_pClient->Disconnect();
 
     // Init Client and connect to NatNet server
     int retCode = g_pClient->Connect( g_connectParams );
@@ -229,6 +227,23 @@ void Internal::LatenciInfo(sFrameOfMocapData* data, void* pUserData, Internal &i
     }
 }
 
+void Internal::InitLastData(int nRigidBodies, Internal &internal){
+    if(internal.last_data.size() < nRigidBodies){
+        internal.last_data.clear();
+        for(int i=0;i < nRigidBodies; i++){
+            sRigidBodyData temp_data;
+            internal.last_data.push_back(temp_data);
+        }
+    }
+}
+
+bool Internal::CompareLastData(sRigidBodyData last, sRigidBodyData curr){
+    if(last.x == curr.x && last.y == curr.y && last.y == curr.y){
+        return false;
+    }
+    return true;
+}
+
 void Internal::DataHandler(sFrameOfMocapData* data, void* pUserData, Internal &internal)
 {   
     int i=0;
@@ -252,11 +267,16 @@ void Internal::DataHandler(sFrameOfMocapData* data, void* pUserData, Internal &i
     ROS_INFO_COND(internal.rosparam.log_frames, "================FrameID================ : %d", data->iFrame);
     // Rigid Bodies
     ROS_INFO_COND(internal.rosparam.log_frames, "Rigid Bodies [Count=%d]", data->nRigidBodies);
+    InitLastData(data->nRigidBodies, internal);
     for(i=0; i < data->nRigidBodies; i++)
         {
             if(internal.rosparam.pub_rigid_body)
             {
-                PubRigidbodyPose(data->RigidBodies[i], internal);
+                if(CompareLastData(internal.last_data[i], data->RigidBodies[i])){
+                    PubRigidbodyPose(data->RigidBodies[i], internal);  
+                }
+                internal.last_data[i] = data->RigidBodies[i];
+                
             }
         ROS_INFO_COND(internal.rosparam.log_frames, "Rigid Body [ID=%d  Error=%3.2f]", data->RigidBodies[i].ID, data->RigidBodies[i].MeanError);//, bTrackingValid);
         ROS_INFO_COND(internal.rosparam.log_frames, "x\ty\tz\tqx\tqy\tqz\tqw");
@@ -268,10 +288,10 @@ void Internal::DataHandler(sFrameOfMocapData* data, void* pUserData, Internal &i
     // Markers
     for(i=0; i < data->nLabeledMarkers; i++) 
     {  
-        ROS_INFO_COND(internal.rosparam.log_frames, "Markers [Count=%i]", i);
-        ROS_INFO_COND(internal.rosparam.log_frames, "x\ty\tz");
-        ROS_INFO_COND(internal.rosparam.log_frames, "%3.2f\t%3.2f\t%3.2f", data->LabeledMarkers[i].x, data->LabeledMarkers[i].y, data->LabeledMarkers[i].z);
-        
+        // ROS_INFO_COND(internal.rosparam.log_frames, "Markers [Count=%i]", i);
+        // ROS_INFO_COND(internal.rosparam.log_frames, "x\ty\tz");
+        // ROS_INFO_COND(internal.rosparam.log_frames, "%3.2f\t%3.2f\t%3.2f", data->LabeledMarkers[i].x, data->LabeledMarkers[i].y, data->LabeledMarkers[i].z);
+
         bool bUnlabeled = ((data->LabeledMarkers[i].params & 0x10) != 0);
         if(bUnlabeled)
         {

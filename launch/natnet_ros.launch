@@ -7,8 +7,8 @@
   <arg name="log_latencies" default="false"/>
 
   <!-- CONNECTION -->
-  <arg name="serverIP" default="192.168.68.72"/>
-  <arg name="clientIP" default="192.168.68.139"/> <!-- skymul boom pc -->
+  <arg name="serverIP" default="192.168.68.76"/>
+  <arg name="clientIP" default="192.168.68.64"/> <!-- skymul boom pc -->
   <arg name="serverType" default="multicast"/>
   <arg name="multicastAddress" default="239.255.42.99"/>
   <arg name="serverCommandPort" default="1510"/>
@@ -32,7 +32,7 @@
   <!-- Use below line if gdb needs to be run remove escape \ before the args -->
   <!-- <node pkg="natnet_ros_cpp" type="natnet_ros_cpp" name="natnet_ros" output="screen" launch-prefix="gdb -ex run \-\-args">    -->
 
-  <node pkg="natnet_ros_cpp" type="natnet_ros_cpp" name="natnet_ros" output="screen">    
+  <node pkg="natnet_ros_cpp" type="natnet_ros_cpp" name="natnet_ros" output="screen" respawn="true">    
     <!-- CONFIG-FILE -->
     <rosparam file="$(find natnet_ros_cpp)/config/$(arg conf_file)"/>   
   
