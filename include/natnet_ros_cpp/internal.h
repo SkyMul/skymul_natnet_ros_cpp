@@ -5,6 +5,7 @@
 #include <NatNetClient.h>
 
 #include <map>
+#include <vector>
 
 #include <ros/publisher.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -41,9 +42,13 @@ public:
     int UnlabeledCount = 0;
     sServerDescription g_serverDescription;
     SetParam rosparam;
+    std::vector<sRigidBodyData> last_data;
 
     void Pass(){}; //Void function to do nothing
     void Init(ros::NodeHandle &n); //take care of ros params
+
+    void InitLastData(int, Internal&);
+    bool CompareLastData(sRigidBodyData, sRigidBodyData);
 
     // Establish a NatNet Client connection
     int ConnectClient(NatNetClient* g_pClient, sNatNetClientConnectParams &g_connectParams);
