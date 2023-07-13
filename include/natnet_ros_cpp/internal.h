@@ -42,11 +42,17 @@ public:
     sServerDescription g_serverDescription;
     SetParam rosparam;
 
+    std::vector<sRigidBodyData> last_data;
+
     void Pass(){}; //Void function to do nothing
     void Init(ros::NodeHandle &n); //take care of ros params
 
     // Establish a NatNet Client connection
     int ConnectClient(NatNetClient* g_pClient, sNatNetClientConnectParams &g_connectParams);
+
+    void InitLastData(int, Internal&);
+
+    bool CompareLastData(sRigidBodyData , sRigidBodyData );
 
     // MessageHandler receives NatNet error/debug messages
     static void MessageHandler( Verbosity msgType, const char* msg );
