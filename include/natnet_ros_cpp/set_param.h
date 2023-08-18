@@ -28,6 +28,8 @@ public:
     bool pub_rigid_body_marker = false; // To enable publishing individual markers of rigidbodies
     bool pub_individual_marker_after_tracking = false; // To publish the position of individual markers
     bool pub_pointcloud = false; // To publish all the marker as pointcloud
+    bool tf_direction_forward = true;   //If true, the opti_map to rigidbody transform will be published
+                                        // else, the reverse. Useful when base_link of robots have multiple sensors
     std::string serverIP;
     std::string clientIP;
     std::string serverType;
@@ -58,8 +60,18 @@ public:
         n.getParam("pub_individual_marker_after_tracking", pub_individual_marker_after_tracking);
         n.getParam("pub_pointcloud", pub_pointcloud);
         n.getParam("mocap_base_frame", mocap_base_frame);
+        n.getParam("tf_direction_forward", tf_direction_forward);
         ROS_INFO("Mocap base frame : %s", mocap_base_frame.c_str());
-        
+    
+        if (tf_direction_forward)
+        {
+            ROS_INFO("Publishing TF from Base to Rigidbody");
+        }
+        else
+        {
+            ROS_INFO("Publishing TF from Rigidbody to Base");
+        }
+
         if (n.getParam("serverIP", serverIP))
         {
             ROS_INFO("Got server IP : %s", serverIP.c_str());

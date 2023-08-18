@@ -8,7 +8,7 @@
 
   <!-- CONNECTION -->
   <arg name="serverIP" default="192.168.68.76"/>
-  <arg name="clientIP" default="192.168.68.64"/> <!-- skymul boom pc -->
+  <arg name="clientIP" default="192.168.68.68"/> <!-- skymul boom pc -->
   <arg name="serverType" default="multicast"/>
   <arg name="multicastAddress" default="239.255.42.99"/>
   <arg name="serverCommandPort" default="1510"/>
@@ -16,6 +16,8 @@
 
   <!-- PUBLISHING -->
   <!-- To publish the frame of rigid body -->
+  <arg name="tf_direction_forward" default="true"/> <!-- If true, the opti_map to rigidbody transform will be published -->
+                                                    <!--   else, the reverse. Useful when base_link of robots have multiple sensors -->
   <arg name="pub_rigid_body" default="true"/> 
   <!-- To publish the individual (unlabeled) markers along with the (labeled) markers of the rigid bodies -->
   <!-- keep pub_rigid_body to true to publish the markers of the rigidbody -->
@@ -50,6 +52,7 @@
     <param name="serverDataPort" value="$(arg serverDataPort)" type="int"/>
 
     <!-- PUBLISHING -->
+    <param name="tf_direction_forward" value="$(arg tf_direction_forward)" type="bool"/>
     <param name="pub_rigid_body" value="$(arg pub_rigid_body)" type="bool"/>
     <param name="pub_rigid_body_marker" value="$(arg pub_rigid_body_marker)" type="bool"/>
     <param name="pub_individual_marker_after_tracking" value="$(arg pub_individual_marker_after_tracking)" type="bool"/>

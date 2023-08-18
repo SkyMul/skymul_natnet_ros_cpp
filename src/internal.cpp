@@ -1,6 +1,6 @@
 #include "internal.h"
 #include <string>
-
+#include <tf/transform_broadcaster.h>
 void Internal::Init(ros::NodeHandle &n)
 {
     this->rosparam.getNset(n);
@@ -328,9 +328,9 @@ void Internal::DataHandler(sFrameOfMocapData* data, void* pUserData, Internal &i
     internal.UnlabeledCount = 0; 
 }
 
-void Internal::initROSmsgHeader(std_msgs::Header &msgHeader, Internal &internal)
+void Internal::initROSmsgHeader(std_msgs::Header &msgHeader, Internal &internal, std::string &base_frame)
 {
-    msgHeader.frame_id = internal.rosparam.mocap_base_frame;
+    msgHeader.frame_id = base_frame;
     msgHeader.stamp = timeStampLatestFrame;
 }
 
@@ -338,7 +338,8 @@ void Internal::PubRigidbodyPose(sRigidBodyData &data, Internal &internal)
 {
     // Creating a msg to put data related to the rigid body and 
     geometry_msgs::PoseStamped msgRigidBodyPose;
-    initROSmsgHeader(msgRigidBodyPose.header, internal);
+    // Pose is published wrt mocap_base_frame
+    initROSmsgHeader(msgRigidBodyPose.header, internal, internal.rosparam.mocap_base_frame);
     msgRigidBodyPose.pose.position.x = data.x;
     msgRigidBodyPose.pose.position.y = data.y;
     msgRigidBodyPose.pose.position.z = data.z;
@@ -350,17 +351,9 @@ void Internal::PubRigidbodyPose(sRigidBodyData &data, Internal &internal)
     // creating tf frame to visualize in the rviz
     static tf2_ros::TransformBroadcaster tfRigidBodies;
     geometry_msgs::TransformStamped msgTFRigidBodies;
-    initROSmsgHeader(msgTFRigidBodies.header, internal);
-    msgTFRigidBodies.child_frame_id = internal.ListRigidBodies[data.ID];
-    msgTFRigidBodies.transform.translation.x = data.x;
-    msgTFRigidBodies.transform.translation.y = data.y;
-    msgTFRigidBodies.transform.translation.z = data.z;
-    msgTFRigidBodies.transform.rotation.x = data.qx;
-    msgTFRigidBodies.transform.rotation.y = data.qy;
-    msgTFRigidBodies.transform.rotation.z = data.qz;
-    msgTFRigidBodies.transform.rotation.w = data.qw;
+
+    fillTFMessage(data,internal,msgTFRigidBodies);
     tfRigidBodies.sendTransform(msgTFRigidBodies);
-    
 }
 
 void Internal::PubMarkerPoseWithTrack(sMarker &data, Internal &internal)
@@ -374,7 +367,7 @@ void Internal::PubMarkerPoseWithTrack(sMarker &data, Internal &internal)
         internal.rosparam.object_list[update].z = data.z;
     
         geometry_msgs::PoseStamped msgMarkerPose;
-        initROSmsgHeader(msgMarkerPose.header, internal);
+        initROSmsgHeader(msgMarkerPose.header, internal, internal.rosparam.mocap_base_frame);
         msgMarkerPose.pose.position.x = data.x;
         msgMarkerPose.pose.position.y = data.y;
         msgMarkerPose.pose.position.z = data.z;
@@ -386,7 +379,63 @@ void Internal::PubMarkerPoseWithTrack(sMarker &data, Internal &internal)
         // creating tf frame to visualize in the rviz
         static tf2_ros::TransformBroadcaster tfMarker;
         geometry_msgs::TransformStamped msgTFMarker;
-        initROSmsgHeader(msgTFMarker.header, internal);
+        fillTFMessage(data, internal, msgTFMarker, update);
+        tfMarker.sendTransform(msgTFMarker);
+    }
+}
+
+void Internal::AppendToPointCloud(sMarker &data, Internal &internal)
+{
+    initROSmsgHeader(internal.msgPointcloud.header, internal, internal.rosparam.mocap_base_frame);
+    geometry_msgs::Point32 msgPoint;
+    msgPoint.x = data.x;
+    msgPoint.y = data.y;
+    msgPoint.z = data.z;
+    internal.msgPointcloud.points.push_back(msgPoint);
+}
+
+void Internal::fillTFMessage(sRigidBodyData &data, Internal &internal, geometry_msgs::TransformStamped &msgTFRigidBodies)
+{
+    if(internal.rosparam.tf_direction_forward)
+    {
+        initROSmsgHeader(msgTFRigidBodies.header, internal, internal.rosparam.mocap_base_frame);
+        msgTFRigidBodies.child_frame_id = internal.ListRigidBodies[data.ID];
+        msgTFRigidBodies.transform.translation.x = data.x;
+        msgTFRigidBodies.transform.translation.y = data.y;
+        msgTFRigidBodies.transform.translation.z = data.z;
+        msgTFRigidBodies.transform.rotation.x = data.qx;
+        msgTFRigidBodies.transform.rotation.y = data.qy;
+        msgTFRigidBodies.transform.rotation.z = data.qz;
+        msgTFRigidBodies.transform.rotation.w = data.qw;
+    }
+    else
+    {
+        initROSmsgHeader(msgTFRigidBodies.header, internal, internal.ListRigidBodies[data.ID] );
+        msgTFRigidBodies.child_frame_id = internal.rosparam.mocap_base_frame;
+        tf::Transform transform;
+        tf::Vector3 m;
+        tf::Quaternion q(data.qx,data.qy,data.qz,data.qw);
+        m[0] = data.x;
+        m[1] = data.y;
+        m[2] = data.z;
+        transform.setOrigin(m);
+        transform.setRotation(q);
+        tf::Transform inv_transform = transform.inverse();
+        msgTFRigidBodies.transform.translation.x = inv_transform.getOrigin()[0];
+        msgTFRigidBodies.transform.translation.y = inv_transform.getOrigin()[1];
+        msgTFRigidBodies.transform.translation.y = inv_transform.getOrigin()[2];
+        msgTFRigidBodies.transform.rotation.x = inv_transform.getRotation().getX();
+        msgTFRigidBodies.transform.rotation.y = inv_transform.getRotation().getY();
+        msgTFRigidBodies.transform.rotation.z = inv_transform.getRotation().getZ();
+        msgTFRigidBodies.transform.rotation.w = inv_transform.getRotation().getW();
+    }
+}
+
+void Internal::fillTFMessage(sMarker &data, Internal &internal, geometry_msgs::TransformStamped &msgTFMarker, int update)
+{
+    if(internal.rosparam.tf_direction_forward)
+    {
+        initROSmsgHeader(msgTFMarker.header, internal, internal.rosparam.mocap_base_frame);
         msgTFMarker.child_frame_id = internal.rosparam.object_list[update].name;
         msgTFMarker.transform.translation.x = data.x;
         msgTFMarker.transform.translation.y = data.y;
@@ -395,18 +444,28 @@ void Internal::PubMarkerPoseWithTrack(sMarker &data, Internal &internal)
         msgTFMarker.transform.rotation.y = 0;
         msgTFMarker.transform.rotation.z = 0;
         msgTFMarker.transform.rotation.w = 1;
-        tfMarker.sendTransform(msgTFMarker);
     }
-}
-
-void Internal::AppendToPointCloud(sMarker &data, Internal &internal)
-{
-    initROSmsgHeader(internal.msgPointcloud.header, internal);
-    geometry_msgs::Point32 msgPoint;
-    msgPoint.x = data.x;
-    msgPoint.y = data.y;
-    msgPoint.z = data.z;
-    internal.msgPointcloud.points.push_back(msgPoint);
+    else
+    {
+        initROSmsgHeader(msgTFMarker.header, internal, internal.rosparam.object_list[update].name);
+        msgTFMarker.child_frame_id = internal.rosparam.mocap_base_frame;
+        tf::Transform transform;
+        tf::Vector3 m;
+        tf::Quaternion q(0,0,0,1);
+        m[0] = data.x;
+        m[1] = data.y;
+        m[2] = data.z;
+        transform.setOrigin(m);
+        transform.setRotation(q);
+        tf::Transform inv_transform = transform.inverse();
+        msgTFMarker.transform.translation.x = inv_transform.getOrigin()[0];
+        msgTFMarker.transform.translation.y = inv_transform.getOrigin()[1];
+        msgTFMarker.transform.translation.y = inv_transform.getOrigin()[2];
+        msgTFMarker.transform.rotation.x = inv_transform.getRotation().getX();
+        msgTFMarker.transform.rotation.y = inv_transform.getRotation().getY();
+        msgTFMarker.transform.rotation.z = inv_transform.getRotation().getZ();
+        msgTFMarker.transform.rotation.w = inv_transform.getRotation().getW();
+    }
 }
 
 void Internal::PubRigidbodyMarker(sMarker &data, Internal &internal)

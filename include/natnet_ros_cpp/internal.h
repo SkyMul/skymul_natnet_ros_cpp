@@ -64,7 +64,7 @@ public:
     void LatenciInfo(sFrameOfMocapData* data, void* pUserData, Internal &internal);
     
     // Initialize the header of the ROS message 
-    void initROSmsgHeader(std_msgs::Header &msgHeader, Internal &internal);
+    void initROSmsgHeader(std_msgs::Header &msgHeader, Internal &internal, std::string &base_frame);
 
     // Handles the data from the frame and publish it as ROS topics
     void DataHandler(sFrameOfMocapData* data, void* pUserData, Internal &internal);
@@ -81,6 +81,8 @@ public:
     // Publish Point cloud from the marker
     void AppendToPointCloud(sMarker &data, Internal &internal);
 
+    void fillTFMessage(sRigidBodyData &data, Internal &internal, geometry_msgs::TransformStamped &msgTFRigidBodies);
+    void fillTFMessage(sMarker &data, Internal &internal, geometry_msgs::TransformStamped &msgTFMarker, int update);
 };
 
 
