@@ -7,8 +7,9 @@
   <arg name="log_latencies" default="false"/>
 
   <!-- CONNECTION -->
-  <arg name="serverIP" default="192.168.68.76"/>
-  <arg name="clientIP" default="192.168.68.64"/> <!-- skymul boom pc -->
+  <arg name="serverIP" default="192.168.68.71"/>
+  <!-- <arg name="clientIP" default="192.168.68.64"/> --> <!-- skymul boom pc -->
+  <arg name="clientIP" default="192.168.68.53"/> <!-- dobby nuc2 -->
   <arg name="serverType" default="multicast"/>
   <arg name="multicastAddress" default="239.255.42.99"/>
   <arg name="serverCommandPort" default="1510"/>

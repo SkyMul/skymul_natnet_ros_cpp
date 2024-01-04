@@ -37,23 +37,30 @@ int Internal::ConnectClient(NatNetClient* g_pClient, sNatNetClientConnectParams 
         ret = g_pClient->SendMessageAndWait("FrameRate", &pResult, &nBytes);
         if (ret == ErrorCode_OK)
         {
-            float fRate = *((float*)pResult);
+            // float fRate = *((float*)pResult);
+            // ros::Duration(0.005).sleep();
+            float fRate = *((double*)pResult);
             ROS_INFO("Mocap Framerate : %3.2f", fRate);
         }
         else
             ROS_ERROR("Error getting frame rate.");
 
         // get # of analog samples per mocap frame of data
-        ret = g_pClient->SendMessageAndWait("AnalogSamplesPerMocapFrame", &pResult, &nBytes);
+
+        // ret = g_pClient->SendMessageAndWait("AnalogSamplesPerMocapFrame", &pResult, &nBytes);
+        ret = g_pClient->SendMessageAndWait("AnalogSamplesPerMocapFrame", 5, 5, &pResult, &nBytes);
         if (ret == ErrorCode_OK)
         {
-            //g_analogSamplesPerMocapFrame = *((int*)pResult);
-            ROS_INFO("Analog Samples Per Mocap Frame : %d", *((int*)pResult));
+            auto g_analogSamplesPerMocapFrame = *((int*)pResult);
+            ROS_INFO("Analog Samples Per Mocap Frame : %d", g_analogSamplesPerMocapFrame); //*((int*)pResult));
         }
         else
             ROS_ERROR("Error getting Analog frame rate.");
+
+        // return ret;
     }
 
+    // return retCode;
     return ErrorCode_OK;
 }
 
