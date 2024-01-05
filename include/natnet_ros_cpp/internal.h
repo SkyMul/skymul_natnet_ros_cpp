@@ -41,6 +41,7 @@ public:
     int UnlabeledCount = 0;
     sServerDescription g_serverDescription;
     SetParam rosparam;
+    std::vector<sRigidBodyData> last_data;  // Record latest data to make sure stale data is not published
 
     void Pass(){}; //Void function to do nothing
     void Init(ros::NodeHandle &n); //take care of ros params
@@ -75,6 +76,12 @@ public:
 
     // Publish Point cloud from the marker
     void AppendToPointCloud(sMarker &data, Internal &internal);
+
+    // Record the latest data to compare with new
+    void InitLastData(int, Internal&);
+
+    // Compare function to see if new data is stale
+    bool CompareLastData(sRigidBodyData , sRigidBodyData );
 
 };
 

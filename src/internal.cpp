@@ -229,6 +229,20 @@ void Internal::LatenciInfo(sFrameOfMocapData* data, void* pUserData, Internal &i
     }
 }
 
+void Internal::InitLastData(int nRigidBodies, Internal &internal){
+    for(int i=0;i < nRigidBodies; i++){
+        sRigidBodyData temp_data;
+        internal.last_data.push_back(temp_data);
+    }
+}
+
+bool Internal::CompareLastData(sRigidBodyData last, sRigidBodyData curr){
+    if(last.x == curr.x && last.y == curr.y && last.y == curr.y){
+        return false;
+    }
+    return true;
+}
+
 void Internal::DataHandler(sFrameOfMocapData* data, void* pUserData, Internal &internal)
 {   
     int i=0;
@@ -238,32 +252,52 @@ void Internal::DataHandler(sFrameOfMocapData* data, void* pUserData, Internal &i
     if ( bSystemLatencyAvailable )
     {
         timeStampLatestFrame = ros::Time::now() - ros::Duration( pClient->SecondsSinceHostTimestamp( data->CameraMidExposureTimestamp ) );
-        //ROS_INFO_COND(internal.rosparam.log_latencies, "Local time: %f", ros::Time::now().toSec());
-        //ROS_INFO_COND(internal.rosparam.log_latencies, "timeStampLatestFrame: %f", timeStampLatestFrame.toSec());
+        ROS_INFO_COND(internal.rosparam.log_latencies, "Local time: %f", ros::Time::now().toSec());
+        ROS_INFO_COND(internal.rosparam.log_latencies, "timeStampLatestFrame: %f", timeStampLatestFrame.toSec());
     }
     else
     {
         // Transit latency is defined as the span of time between Motive transmitting the frame of data, and its reception by the client (now).
         // The SecondsSinceHostTimestamp method relies on NatNetClient's internal clock synchronization with the server using Cristian's algorithm.
         timeStampLatestFrame = ros::Time::now() - ros::Duration( pClient->SecondsSinceHostTimestamp( data->TransmitTimestamp ) );
-        //ROS_INFO_COND(internal.rosparam.log_latencies, "Approx timeStampLatestFrame: %f", timeStampLatestFrame.toSec());
+        ROS_INFO_COND(internal.rosparam.log_latencies, "Approx timeStampLatestFrame: %f", timeStampLatestFrame.toSec());
     }
 
     ROS_INFO_COND(internal.rosparam.log_frames, "================FrameID================ : %d", data->iFrame);
     // Rigid Bodies
     ROS_INFO_COND(internal.rosparam.log_frames, "Rigid Bodies [Count=%d]", data->nRigidBodies);
-    for(i=0; i < data->nRigidBodies; i++)
+
+    if(internal.rosparam.pub_rigid_body)
+    {
+        if(internal.last_data.size()==0) // Init data the first time
+            InitLastData(data->nRigidBodies, internal);
+        if(i == 0 && (internal.last_data.size() != data->nRigidBodies) )
         {
-            if(internal.rosparam.pub_rigid_body)
-            {
-                PubRigidbodyPose(data->RigidBodies[i], internal);
+            // This will cause a crash when (data->nRigidBodies > internal.last_data.size()) and bug in other case.
+            ROS_ERROR("Number of rigid bodies changed: Internal.last_data.size():%d, data->nRigidBodies:%d ", 
+                        internal.last_data.size(), data->nRigidBodies);
+            // Cause an intentional crash and respawn
+            std::cout << 1/0 << std::endl;
+        }
+    }else
+    {
+        internal.last_data.clear();  // Clear data if not used
+    }
+    for(i=0; i < data->nRigidBodies; i++)
+    {
+        if(internal.rosparam.pub_rigid_body)
+        {
+            if(CompareLastData(internal.last_data[i], data->RigidBodies[i])){
+                PubRigidbodyPose(data->RigidBodies[i], internal);  
             }
+            internal.last_data[i] = data->RigidBodies[i];
+        }   
         ROS_INFO_COND(internal.rosparam.log_frames, "Rigid Body [ID=%d  Error=%3.2f]", data->RigidBodies[i].ID, data->RigidBodies[i].MeanError);//, bTrackingValid);
         ROS_INFO_COND(internal.rosparam.log_frames, "x\ty\tz\tqx\tqy\tqz\tqw");
         ROS_INFO_COND(internal.rosparam.log_frames, "%3.2f\t%3.2f\t%3.2f\t%3.2f\t%3.2f\t%3.2f\t%3.2f",
-            data->RigidBodies[i].x, data->RigidBodies[i].y, data->RigidBodies[i].z,
-            data->RigidBodies[i].qx, data->RigidBodies[i].qy, data->RigidBodies[i].qz, data->RigidBodies[i].qw);
-        }
+        data->RigidBodies[i].x, data->RigidBodies[i].y, data->RigidBodies[i].z,
+        data->RigidBodies[i].qx, data->RigidBodies[i].qy, data->RigidBodies[i].qz, data->RigidBodies[i].qw);
+    }
 
     // Markers
     for(i=0; i < data->nLabeledMarkers; i++) 
